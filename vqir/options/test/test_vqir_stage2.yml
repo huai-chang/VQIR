@@ -1,0 +1,74 @@
+name: test_vqir_stage2
+model_type: VQIRRFModel
+gpu_ids: [0] 
+scale: [1,2,4]
+ir_scale: &f 16 # 16 or 32
+manual_seed: 9
+
+datasets:
+  DIV2K:
+    name: DIV2K
+    mode: MultiHR
+    dataroot_HR: # path to the HR test dataset
+  
+
+# network structures
+network_ir:
+  type: VQIR
+  stage: 2
+  ir_scale: *f
+  ch: 128
+  ch_mult: [ 1,1,2,2,4 ]
+  attn_mult: [3,3]
+  in_channels: 3
+  out_channels: 3
+  z_channels: 256
+  embed_dim: 256
+  n_embed: 1024
+  num_res_blocks: 2
+  double_z: false
+
+# path
+path:
+  pretrain_network_ir: # path to the trained stage2 model
+  strict_load_ir: true
+  resume_state: ~
+
+# validation settings
+val:
+  save_img: true
+  suffix: ~  # add suffix to saved images, if None, use exp name
+  pbar: true
+  metrics:
+    psnr_Level_1:
+      type: calculate_psnr
+      crop_border: 16
+      test_y_channel: true
+    
+    psnr_Level_2:
+      type: calculate_psnr
+      crop_border: 8
+      test_y_channel: true
+
+    psnr_Level_4:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: true
+
+    ssim_Level_1: 
+      type: calculate_ssim
+      crop_border: 16
+      test_y_channel: true
+    
+    ssim_Level_2: 
+      type: calculate_ssim
+      crop_border: 8
+      test_y_channel: true
+    
+    ssim_Level_4: 
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: true
+
+    sr_lpips:
+      type: calculate_lpips

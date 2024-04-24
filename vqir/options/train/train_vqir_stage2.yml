@@ -1,0 +1,156 @@
+# settings
+name: train_vqir_stage2_debug
+model_type: VQIRRFModel
+gpu_ids: [0]
+scale: [1,2,4]
+ir_scale: &f 16 # 16 or 32
+manual_seed: 1026
+syncbn: true # must set to true to avoid bn inplace revision
+
+datasets:
+  train:
+    name: DIV2K
+    mode: MultiHR
+    dataroot_HR: # path to the HR train dataset
+    HR_size: 256
+    n_workers: 16
+    batch_size: 8
+    use_shuffle: true
+    use_flip: true
+    use_rot: true
+    subset_file: ~
+
+  val:
+    # Please modify accordingly to use your own validation
+    # Or comment the val block if do not need validation during training
+    name: DIV2K
+    mode: MultiHR
+    dataroot_HR: # path to the HR valid dataset
+
+# network structures
+network_ir:
+  type: VQIR
+  stage: 2
+  ir_scale: *f
+  ch: 128
+  ch_mult: [ 1,1,2,2,4 ]
+  attn_mult: [3,3]
+  in_channels: 3
+  out_channels: 3
+  z_channels: 256
+  embed_dim: 256
+  n_embed: 1024
+  num_res_blocks: 2
+  double_z: false
+
+network_d:
+  type: UNetDiscriminatorSN 
+  num_in_ch: 3
+
+# path
+path:
+  pretrain_network_ir: # path to the stage1 trained model
+  strict_load_ir: true
+
+  pretrain_network_d: ~
+  strict_load_d: ~
+
+  resume_state: ~ 
+  ignore_resume_networks: ~
+
+# training settings
+train:
+  optim_ir_enc:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [ 0.9, 0.96 ] # align with taming
+
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [ 0.9, 0.96 ]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [ 300000 ]
+    gamma: 1
+
+  total_iter: 500000
+  warmup_iter: -1  # no warm up
+
+  pixel_opt:
+    type: L1Loss
+    loss_weight: !!float 1.0
+    reduction: mean
+
+  edge_opt:
+    type: EdgeLoss
+    loss_weight: !!float 0.05
+    reduction: mean
+
+  perceptual_opt:
+    type: LPIPS
+    perceptual_weight: !!float 1.0
+
+  gan_opt:
+    type: GANLoss
+    gan_type: hinge
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: 0.1
+
+# validation settings
+val:
+  val_freq: !!float 5e3
+  save_img: true
+  fidelity_ratio: 1.0
+  metrics:
+    psnr_Level_1:
+      type: calculate_psnr
+      crop_border: 16
+      test_y_channel: true
+    
+    psnr_Level_2:
+      type: calculate_psnr
+      crop_border: 8
+      test_y_channel: true
+
+    psnr_Level_4:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: true
+
+    ssim_Level_1: 
+      type: calculate_ssim
+      crop_border: 16
+      test_y_channel: true
+    
+    ssim_Level_2: 
+      type: calculate_ssim
+      crop_border: 8
+      test_y_channel: true
+    
+    ssim_Level_4: 
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: true
+
+    sr_lpips:
+      type: calculate_lpips
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
+find_unused_parameters: True

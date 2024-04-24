@@ -1,0 +1,12 @@
+basicsr==1.4.2
+einops==0.7.0
+lmdb==1.4.1
+numpy==1.23.1
+opencv_python==4.8.1.78
+PyYAML==6.0.1
+scipy==1.12.0
+tensorboardX==2.6.2.2
+timm==0.9.7
+torch==2.0.1
+torchvision==0.13.1
+tqdm==4.66.1
