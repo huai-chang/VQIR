@@ -1,7 +1,6 @@
 # Towards Extreme Image Rescaling with Generative Prior and Invertible Prior
 
 > Hao Wei, Chenyang Ge, Zhiyuan Li, Xin Qiao, Pengchao Deng <br>
->Institute of Artificial Intelligence and Robotics, Xi’an Jiaotong University
 >
 > This paper explore the implicit rich and diverse generative prior embedded in the pretrained VQGAN to reduce the ambiguity of extreme upscaling (16$\times$ and 32$\times$) and improve the high-resolution reconstruction. To achieve a mutual inverse between semantically meaningful low-resolution images and quantized features, we develop an invertible feature recovery module that achieves better feature matching accuracy and converges more stable than conventional encoder-decoder networks. In addition, a multi-scale refinement module is proposed to help alleviate color distortions and artifacts.
 
