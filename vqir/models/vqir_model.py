@@ -39,7 +39,6 @@ class VQIRModel(BaseModel):
             if 'icrm' in k:
                 encoder_params.append(v)
             else:
-                # not optimize codebook and texture decoder
                 logger.warning(f'Params {k} will not be optimized.')
 
         optim_type = train_opt['optim_ir_enc'].pop('type')
