@@ -108,7 +108,7 @@ class AttentionBlock(nn.Module):
         N (int): Number of channels)
     """
 
-    def __init__(self, N):
+    def __init__(self, N, M):
         super().__init__()
 
         class ResidualUnit(nn.Module):
@@ -117,11 +117,11 @@ class AttentionBlock(nn.Module):
             def __init__(self):
                 super().__init__()
                 self.conv = nn.Sequential(
-                    conv1x1(N, N // 2),
+                    conv1x1(N, M),
                     nn.ReLU(inplace=True),
-                    conv3x3(N // 2, N // 2),
+                    conv3x3(M, M),
                     nn.ReLU(inplace=True),
-                    conv1x1(N // 2, N),
+                    conv1x1(M, N),
                 )
                 self.relu = nn.ReLU(inplace=True)
 

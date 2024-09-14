@@ -5,7 +5,7 @@ from utils.registry import ARCH_REGISTRY
 from archs.modules.attn_arch import Inter_SA, Intra_SA
 from archs.modules.vqgan_arch import VQGANDecoder, VQGANEncoder, ResnetBlock
 from archs.modules.quantize_arch import VectorQuantizer2 as VectorQuantizer
-from archs.inv_arch import ICRM
+from archs.inv_arch import ICRM, ICRM_32
 from timm.models.layers import trunc_normal_
 
 class Quan(nn.Module):
@@ -138,8 +138,11 @@ class VQIR(nn.Module):
             self.refine = Refine(ch=ch,ch_mult=ch_mult,attn_mult=attn_mult)
 
         self.apply(self._init_weights)
-
-        self.icrm = ICRM(in_channels=embed_dim,out_channels=out_channels, ir_scale=ir_scale)
+        
+        if ir_scale == 16:
+            self.icrm = ICRM(in_channels=embed_dim,out_channels=out_channels)
+        else:
+            self.icrm = ICRM_32(in_channels=embed_dim,out_channels=out_channels)
 
     @torch.no_grad()
     def _init_weights(self, m):
@@ -203,17 +206,21 @@ class VQIR(nn.Module):
 
 if __name__ == '__main__':
     x = torch.randn(2,3,256,256)
-    model = VQIR(stage=1,
+    ckpt = torch.load('/Users/huaichang/Downloads/vqir_32x.pth')
+    model = VQIR(stage=2,
+                 ir_scale=32,
                  in_channels=3, 
                  out_channels=3, 
                  ch=128, 
                  ch_mult=[1,1,2,2,4], 
-                 attn_mult=[4,4,2],
+                 attn_mult=[3,3],
                  num_res_blocks=2, 
                  z_channels=256, 
                  n_embed=1024, 
                  embed_dim=256, 
                  double_z=False)
+    
+    model.load_state_dict(ckpt)
 
     res = model(x,is_train=False)
     for i in res:

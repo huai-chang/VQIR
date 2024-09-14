@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from archs.layers import *
 
 class ICRM(nn.Module):
-    def __init__(self, in_channels, out_channels, ir_scale):
+    def __init__(self, in_channels, out_channels):
         super(ICRM, self).__init__()
         self.in_nc = in_channels         #change from 3 to 1
         self.out_nc = out_channels
@@ -27,7 +27,7 @@ class ICRM(nn.Module):
             self.in_nc //= 2
             b = InvertibleConv1x1(self.in_nc)
             self.operations.append(b)
-            b = AttModule(self.in_nc)
+            b = AttModule(self.in_nc, self.in_nc//2)
             self.operations.append(b)
             ###########################################
             b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
@@ -36,37 +36,6 @@ class ICRM(nn.Module):
             self.operations.append(b)
             b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
             self.operations.append(b)
-
-        if ir_scale == 32:
-            b = HaarDownsampling(self.in_nc)
-            self.operations.append(b)
-            self.in_nc *= 4
-            b = InvertibleConv1x1(self.in_nc)
-            self.operations.append(b)
-            ###########################################
-            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-            self.operations.append(b)
-            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-            self.operations.append(b)
-            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-            self.operations.append(b)
-
-            # 64->32->16
-            for i in range(2):
-                b = Conv1x1(self.in_nc, self.in_nc//2)
-                self.operations.append(b)
-                self.in_nc //= 2
-                b = InvertibleConv1x1(self.in_nc)
-                self.operations.append(b)
-                b = AttModule(self.in_nc)
-                self.operations.append(b)
-                ###########################################
-                b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-                self.operations.append(b)
-                b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-                self.operations.append(b)
-                b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
-                self.operations.append(b)
 
         # 16->8->3
         self.inpfeat_extraction = nn.ModuleList()
@@ -76,7 +45,97 @@ class ICRM(nn.Module):
         self.in_nc //=2
         b = InvertibleConv1x1(self.in_nc)
         self.inpfeat_extraction.append(b)
-        b = AttModule(self.in_nc)
+        b = AttModule(self.in_nc, self.in_nc//2)
+        self.inpfeat_extraction.append(b)
+
+        b = Conv1x1(self.in_nc, self.out_nc)
+        self.inpfeat_extraction.append(b)
+
+
+    def forward(self, x, rev=False):
+        if not rev:
+            for op in self.operations:
+                x = op.forward(x, False)
+            for op in self.inpfeat_extraction:
+                x = op.forward(x, False)
+        else:
+            for op in reversed(self.inpfeat_extraction):
+                x = op.forward(x, True)
+            for op in reversed(self.operations):
+                x = op.forward(x, True)
+        return x
+    
+class ICRM_32(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(ICRM_32, self).__init__()
+        self.in_nc = in_channels         #change from 3 to 1
+        self.out_nc = out_channels
+        self.operations = nn.ModuleList()
+
+        ###########################################
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+
+        # 256->128->64->32->16
+        for i in range(4):
+            b = Conv1x1(self.in_nc, self.in_nc//2)
+            self.operations.append(b)
+            self.in_nc //= 2
+            b = InvertibleConv1x1(self.in_nc)
+            self.operations.append(b)
+            b = AttModule(self.in_nc, self.in_nc)
+            self.operations.append(b)
+            ###########################################
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+
+        b = HaarDownsampling(self.in_nc)
+        self.operations.append(b)
+        self.in_nc *= 4
+        b = InvertibleConv1x1(self.in_nc)
+        self.operations.append(b)
+        ###########################################
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+        b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+        self.operations.append(b)
+
+        # 64->32->16
+        for i in range(2):
+            b = Conv1x1(self.in_nc, self.in_nc//2)
+            self.operations.append(b)
+            self.in_nc //= 2
+            b = InvertibleConv1x1(self.in_nc)
+            self.operations.append(b)
+            b = AttModule(self.in_nc, self.in_nc)
+            self.operations.append(b)
+            ###########################################
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+            b = CouplingLayer(self.in_nc // 2, self.in_nc // 2, 3)
+            self.operations.append(b)
+
+        # 16->8->3
+        self.inpfeat_extraction = nn.ModuleList()
+
+        b = Conv1x1(self.in_nc, self.in_nc//2)
+        self.inpfeat_extraction.append(b)
+        self.in_nc //=2
+        b = InvertibleConv1x1(self.in_nc)
+        self.inpfeat_extraction.append(b)
+        b = AttModule(self.in_nc, self.in_nc)
         self.inpfeat_extraction.append(b)
 
         b = Conv1x1(self.in_nc, self.out_nc)
@@ -139,10 +198,10 @@ class HaarDownsampling(nn.Module):
         return self.last_jac
     
 class AttModule(nn.Module):
-    def __init__(self, N):
+    def __init__(self, N, M):
         super(AttModule, self).__init__()
-        self.forw_att = AttentionBlock(N)
-        self.back_att = AttentionBlock(N)
+        self.forw_att = AttentionBlock(N, M)
+        self.back_att = AttentionBlock(N, M)
         
     def forward(self, x, rev = True):
         if not rev:
